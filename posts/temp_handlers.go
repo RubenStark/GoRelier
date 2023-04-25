@@ -89,3 +89,18 @@ func DeleteTempPost(c *fiber.Ctx) error {
 	})
 
 }
+
+// A func to get all the TemporaryPosts
+func GetTempPosts(c *fiber.Ctx) error {
+
+	// Get the posts
+	var posts []TemporaryPost
+	if err := db.DB.Find(&posts).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get posts",
+		})
+	}
+
+	return c.JSON(posts)
+
+}

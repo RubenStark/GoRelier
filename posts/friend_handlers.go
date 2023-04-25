@@ -200,12 +200,20 @@ func DeleteFriendRequest(c *fiber.Ctx) error {
 	}
 
 	// Get the ID of the user from the token
-	if tokenId, err := auth.GetTokenId(token); err != nil {
+	tokenId, err := auth.GetTokenId(token)
+	if err != nil {
 		if friendRequest.UserToNotify.ID != tokenId {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Unauthorized",
 			})
 		}
+	}
+
+	// Check if the user is the one who sent the friend request or the one who received it
+	if friendRequest.UserToNotify.ID != tokenId || friendRequest.User.ID != tokenId {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	// Delete the friend request

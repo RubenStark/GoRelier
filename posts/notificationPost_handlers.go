@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func createNotificationPost(c *fiber.Ctx) error {
+func CreateNotificationPost(c *fiber.Ctx) error {
 	// Parse request body
 	var request struct {
 		UserToNotifyID uint   `json:"user_to_notify_id"`
@@ -51,15 +51,31 @@ func createNotificationPost(c *fiber.Ctx) error {
 	return c.JSON(notificationPost)
 }
 
-func getNotificationPosts(c *fiber.Ctx) error {
+func GetNotificationPosts(c *fiber.Ctx) error {
 	// Parse query parameters
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 	offset := (page - 1) * limit
 
-	// Retrieve notification posts
+	// Get the token from the authorization header
+	token := c.Get("Authorization")
+
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": NTP,
+		})
+	}
+
+	userID, err := auth.GetTokenId(token)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": UTGT,
+		})
+	}
+
+	// Get the notifications for the user with the given ID
 	var notificationPosts []*NotificationPost
-	if err := db.DB.Preload("UserToNotify").Preload("User").Preload("Post").Offset(offset).Limit(limit).Find(&notificationPosts).Error; err != nil {
+	if err := db.DB.Preload("UserToNotify").Preload("User").Preload("Post").Where("user_to_notify_id = ?", userID).Offset(offset).Limit(limit).Find(&notificationPosts).Error; err != nil {
 		return err
 	}
 
@@ -86,7 +102,7 @@ func getNotificationPosts(c *fiber.Ctx) error {
 }
 
 // Set a NotificationPost's read status to true
-func readNotificationPost(c *fiber.Ctx) error {
+func ReadNotificationPost(c *fiber.Ctx) error {
 	// Parse request body
 	var request struct {
 		ID uint `json:"id"`

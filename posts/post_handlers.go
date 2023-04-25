@@ -10,6 +10,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Get a post
+func GetPost(c *fiber.Ctx) error {
+	post := new(Post)
+	if err := db.DB.First(&post, c.Params("id")).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Post not found",
+		})
+	}
+	return c.JSON(post)
+}
+
 // Create a Post
 func CreatePost(c *fiber.Ctx) error {
 
