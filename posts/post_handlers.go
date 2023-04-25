@@ -10,12 +10,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+const (
+	PNF = "Post not found"
+)
+
 // Get a post
 func GetPost(c *fiber.Ctx) error {
 	post := new(Post)
 	if err := db.DB.First(&post, c.Params("id")).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Post not found",
+			"error": PNF,
 		})
 	}
 	return c.JSON(post)
@@ -106,7 +110,7 @@ func DeletePost(c *fiber.Ctx) error {
 	var post Post
 	if err := db.DB.First(&post, c.Params("id")).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Post not found",
+			"error": PNF,
 		})
 	}
 
@@ -151,7 +155,7 @@ func EditPost(c *fiber.Ctx) error {
 	var post Post
 	if err := db.DB.First(&post, c.Params("id")).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Post not found",
+			"error": PNF,
 		})
 	}
 
