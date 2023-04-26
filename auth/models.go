@@ -20,6 +20,12 @@ type Friendship struct {
 	User2 User
 }
 
+type FriendNotification struct {
+	gorm.Model
+	UserToNotify User `gorm:"ForeignKey"`
+	User         User `gorm:"ForeignKey"`
+}
+
 type Interest struct {
 	gorm.Model
 	Interest string

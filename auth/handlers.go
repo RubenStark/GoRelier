@@ -139,28 +139,6 @@ func ValidateJWT(c *fiber.Ctx) error {
 	}
 }
 
-// func GetTokenId(tokenToGet string) (uint, error) {
-// 	// Remove the Bearer part from the token
-// 	tokenStr := tokenToGet[len("Bearer "):]
-// 	// Validate the token
-// 	myPassword := []byte("RelierPassword")
-
-// 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-// 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-// 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-// 		}
-// 		return myPassword, nil
-// 	})
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-// 		return uint(claims["_id"].(float64)), nil
-// 	} else {
-// 		return 0, err
-// 	}
-// }
-
 func GetTokenId(tokenToGet string) (uint, error) {
 	// Remove the Bearer part from the token
 	tokenStr := tokenToGet[len("Bearer "):]

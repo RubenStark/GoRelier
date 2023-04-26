@@ -18,12 +18,12 @@ func main() {
 		&auth.Friendship{},
 		&auth.Interest{},
 		&auth.ProfileImage{},
+		&auth.FriendNotification{},
 		&posts.Post{},
 		&posts.Image{},
 		&posts.Story{},
 		&posts.Comment{},
 		&posts.TemporaryPost{},
-		&posts.FriendNotification{},
 		&posts.NotificationPost{},
 		&posts.View{},
 	) // Migrate the schema
@@ -56,12 +56,12 @@ func setupRoutes(app *fiber.App) {
 	app.Get("/stories/", posts.GetStories)
 
 	//friend routes
-	app.Post("/friends/add/", posts.SendFriendRequest)
-	app.Post("/friends/accept/", posts.AcceptFriendRequest)
-	app.Post("/friends/delete/", posts.DeleteFriendRequest)
-	app.Get("/friends/requests/", posts.GetFriendRequests)
-	app.Delete("/friend/:id/", posts.DeleteFriend)
-	app.Get("/friends/", posts.GetFriendsPaginated)
+	app.Post("/friends/add/", auth.SendFriendRequest)
+	app.Post("/friends/accept/", auth.AcceptFriendRequest)
+	app.Post("/friends/delete/", auth.DeleteFriendRequest)
+	app.Get("/friends/requests/", auth.GetFriendRequests)
+	app.Delete("/friend/:id/", auth.DeleteFriend)
+	app.Get("/friends/", auth.GetFriendsPaginated)
 
 	//notification routes
 	app.Post("/post-notifications/", posts.CreateNotificationPost)

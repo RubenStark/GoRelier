@@ -8,6 +8,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+const (
+	NTP  = "No token provided"
+	UTGT = "Unable to get token"
+	UTGF = "Unable to get friend"
+)
+
 // Create a new comment
 func CreateComment(c *fiber.Ctx) error {
 	postID := c.Params("post")

@@ -72,9 +72,3 @@ type NotificationStory struct {
 	Story        Story     `gorm:"ForeignKey"`
 	Seen         bool      `gorm:"default:false"`
 }
-
-type FriendNotification struct {
-	gorm.Model
-	UserToNotify auth.User `gorm:"ForeignKey"`
-	User         auth.User `gorm:"ForeignKey"`
-}
