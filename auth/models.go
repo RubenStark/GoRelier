@@ -4,27 +4,29 @@ import "github.com/jinzhu/gorm"
 
 type User struct {
 	gorm.Model
-	id            uint `gorm:"primary_key"`
 	Name          string
 	Username      string
 	Email         string `gorm:"unique_index"`
 	Password      string
 	Bio           string
 	Avatar        string
-	ProfileImages []ProfileImage `gorm:"foreignKey:UserID"`
+	ProfileImages []ProfileImage `gorm:"many2many:user_profileimage;"`
 	Interests     []Interest     `gorm:"many2many:user_interests;"`
-	Friends       []User         `gorm:"many2many:user_friends;"`
+}
+
+type Friendship struct {
+	gorm.Model
+	User1 User
+	User2 User
 }
 
 type Interest struct {
 	gorm.Model
-	id   uint `gorm:"primary_key"`
-	Name string
+	Interest string
 }
 
 type ProfileImage struct {
 	gorm.Model
-	id   uint `gorm:"primary_key"`
 	Path string
 	User User `gorm:"foreignKey:ProfileImageID" json:"user"`
 }

@@ -15,11 +15,13 @@ func main() {
 
 	db.DB.AutoMigrate(
 		&auth.User{},
+		&auth.Friendship{},
 		&auth.Interest{},
 		&auth.ProfileImage{},
 		&posts.Post{},
 		&posts.Image{},
 		&posts.Story{},
+		&posts.Comment{},
 		&posts.TemporaryPost{},
 		&posts.FriendNotification{},
 		&posts.NotificationPost{},

@@ -16,6 +16,12 @@ type Post struct {
 	Views     []View `gorm:"foreignKey:PostID" json:"views"`
 }
 
+type Image struct {
+	gorm.Model
+	Path   string
+	PostID uint
+}
+
 type View struct {
 	gorm.Model
 	User     auth.User
@@ -25,6 +31,14 @@ type View struct {
 	Reaction string
 }
 
+type Story struct {
+	gorm.Model
+	User   auth.User
+	UserID uint   `json:"user_id"`
+	Image  Image  `gorm:"foreignKey:StoryID" json:"image"`
+	Views  []View `gorm:"foreignKey:StoryID" json:"views"`
+}
+
 type Comment struct {
 	gorm.Model
 	Body   string `json:"body"`
@@ -32,20 +46,6 @@ type Comment struct {
 	UserID uint `json:"user_id"`
 	Post   Post
 	PostID uint `json:"post_id"`
-}
-
-type Image struct {
-	gorm.Model
-	Path   string
-	PostID uint
-}
-
-type Story struct {
-	gorm.Model
-	User   auth.User
-	UserID uint   `json:"user_id"`
-	Image  Image  `gorm:"foreignKey:StoryID" json:"image"`
-	Views  []View `gorm:"foreignKey:StoryID" json:"views"`
 }
 
 type TemporaryPost struct {

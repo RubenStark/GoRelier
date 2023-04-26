@@ -10,13 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// type Story struct {
-// 	gorm.Model
-// 	User   auth.User
-// 	UserID uint  `json:"user_id"`
-// 	Image  Image `gorm:"foreignKey:StoryID" json:"image"`
-// }
-
 // Create a new Story
 func CreateStory(c *fiber.Ctx) error {
 
