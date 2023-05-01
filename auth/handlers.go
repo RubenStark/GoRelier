@@ -179,3 +179,27 @@ func GetTokenId(tokenToGet string) (uint, error) {
 		return 0, fmt.Errorf("invalid _id claim type")
 	}
 }
+
+func AddAvatar(c *fiber.Ctx) error {
+	// Get the ID from the token
+	token := c.Get("Authorization")
+	id, err := GetTokenId(token)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
+	}
+
+	// Get the file from the request
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid file"})
+	}
+
+	// Save the file
+	filename := fmt.Sprintf("./avatar_pics/%v_%v", id, file.Filename)
+	c.SaveFile(file, filename)
+
+	// Save the image URL in the database
+	db.DB.Model(&User{}).Where("id = ?", id).Update("avatar", filename)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Avatar uploaded"})
+}
