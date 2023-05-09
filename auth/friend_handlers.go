@@ -18,19 +18,10 @@ const (
 func SendFriendRequest(c *fiber.Ctx) error {
 	receiverID := c.Params("receiver")
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
-		})
-	}
-
-	senderID, err := GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
+	senderID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGT,
 		})
 	}
 
@@ -39,7 +30,7 @@ func SendFriendRequest(c *fiber.Ctx) error {
 	var sender User
 
 	// Get the receiver
-	err = db.DB.First(&receiver, receiverID).Error
+	err := db.DB.First(&receiver, receiverID).Error
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
@@ -81,22 +72,17 @@ func AcceptFriendRequest(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGT,
 		})
 	}
 
-	// Get the ID of the user from the token
-	if tokenId, err := GetTokenId(token); err != nil {
-		if friendRequest.UserToNotify.ID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
+	if friendRequest.UserToNotify.ID != tokenId {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	friend := db.DB.First(&friendRequest.UserToNotify, friendRequest.UserToNotify)
@@ -150,21 +136,23 @@ func GetFriendRequests(c *fiber.Ctx) error {
 	}
 
 	// Get the ID of the user from the token
-	if tokenId, err := GetTokenId(token); err != nil {
-		var friendRequests []FriendNotification
-		err = db.DB.Where("user_to_notify_id = ?", tokenId).Find(&friendRequests).Error
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Unable to get friend requests",
-			})
-		}
-
-		return c.JSON(friendRequests)
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGT,
+		})
 	}
 
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		"error": UTGT,
-	})
+	var friendRequests []FriendNotification
+	err := db.DB.Where("user_to_notify_id = ?", tokenId).Find(&friendRequests).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get friend requests",
+		})
+	}
+
+	return c.JSON(friendRequests)
+
 }
 
 // Delete a friend request
@@ -178,23 +166,17 @@ func DeleteFriendRequest(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGT,
 		})
 	}
 
-	// Get the ID of the user from the token
-	tokenId, err := GetTokenId(token)
-	if err != nil {
-		if friendRequest.UserToNotify.ID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
+	if friendRequest.UserToNotify.ID != tokenId {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	// Check if the user is the one who sent the friend request or the one who received it
@@ -217,113 +199,97 @@ func DeleteFriendRequest(c *fiber.Ctx) error {
 
 // Delete a friend
 func DeleteFriend(c *fiber.Ctx) error {
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
 
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGT,
 		})
 	}
 
-	// Get the ID of the user from the token
-	if tokenId, err := GetTokenId(token); err != nil {
-		var user User
-		err = db.DB.First(&user, tokenId).Error
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": UTGF,
-			})
-		}
-
-		// Get the friendship
-		var friendship Friendship
-		err = db.DB.First(&friendship, c.Params("id")).Error
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Unable to found friendship",
-			})
-		}
-		// Check if the user is in the friendship
-		if friendship.User1.ID != tokenId || friendship.User2.ID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
-
-		// Delete the friendship
-		err = db.DB.Delete(&friendship).Error
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Unable to delete friendship",
-			})
-		}
-
-		return nil
+	var user User
+	err := db.DB.First(&user, tokenId).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGF,
+		})
 	}
 
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		"error": UTGT,
-	})
+	// Get the friendship
+	var friendship Friendship
+	err = db.DB.First(&friendship, c.Params("id")).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to found friendship",
+		})
+	}
+	// Check if the user is in the friendship
+	if friendship.User1.ID != tokenId || friendship.User2.ID != tokenId {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	// Delete the friendship
+	err = db.DB.Delete(&friendship).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to delete friendship",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }
 
 // A func to get the friends but only send 10 at a time
 func GetFriendsPaginated(c *fiber.Ctx) error {
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
 
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": UTGT,
 		})
 	}
 
-	// Get the ID of the user from the token
-	if tokenId, err := GetTokenId(token); err != nil {
-		var user User
-		err = db.DB.First(&user, tokenId).Error
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Unable to get user",
-			})
-		}
-
-		var friends []User
-		err := db.DB.Model(&user).Association("Friends").Find(&friends).Error
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Unable to get friends",
-			})
-		}
-
-		// Get the page number
-		page, err := strconv.Atoi(c.Params("page"))
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Unable to get page number",
-			})
-		}
-
-		// Get the number of friends to send
-		var numFriends int
-		if page*10 > len(friends) {
-			numFriends = len(friends) - (page-1)*10
-		} else {
-			numFriends = 10
-		}
-
-		// Create a slice to store the friends
-		var friendsToSend []User
-
-		// Add the friends to the slice
-		for i := 0; i < numFriends; i++ {
-			friendsToSend = append(friendsToSend, friends[(page-1)*10+i])
-		}
-
-		return c.JSON(friendsToSend)
+	var user User
+	err := db.DB.First(&user, tokenId).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user",
+		})
 	}
 
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-		"error": UTGT,
-	})
+	var friends []User
+	err = db.DB.Model(&user).Association("Friends").Find(&friends).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get friends",
+		})
+	}
+
+	// Get the page number
+	page, err := strconv.Atoi(c.Params("page"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get page number",
+		})
+	}
+
+	// Get the number of friends to send
+	var numFriends int
+	if page*10 > len(friends) {
+		numFriends = len(friends) - (page-1)*10
+	} else {
+		numFriends = 10
+	}
+
+	// Create a slice to store the friends
+	var friendsToSend []User
+
+	// Add the friends to the slice
+	for i := 0; i < numFriends; i++ {
+		friendsToSend = append(friendsToSend, friends[(page-1)*10+i])
+	}
+
+	return c.JSON(friendsToSend)
 }

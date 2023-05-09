@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -139,54 +138,10 @@ func ValidateJWT(c *fiber.Ctx) error {
 	}
 }
 
-func GetTokenId(tokenToGet string) (uint, error) {
-	// Remove the Bearer part from the token
-	tokenStr := tokenToGet[len("Bearer "):]
-	// Validate the token
-	myPassword := []byte("RelierPassword")
-
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return myPassword, nil
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return 0, fmt.Errorf("invalid token")
-	}
-
-	claimID, ok := claims["_id"]
-	if !ok {
-		return 0, fmt.Errorf("missing _id claim")
-	}
-
-	// Validate the type of the claim value
-	switch claimID.(type) {
-	case float64:
-		return uint(claimID.(float64)), nil
-	case json.Number:
-		id, err := claimID.(json.Number).Int64()
-		if err != nil {
-			return 0, fmt.Errorf("invalid _id claim value")
-		}
-		return uint(id), nil
-	default:
-		return 0, fmt.Errorf("invalid _id claim type")
-	}
-}
-
 func AddAvatar(c *fiber.Ctx) error {
 	// Get the ID from the token
-	token := c.Get("Authorization")
-	id, err := GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
-	}
+	id := c.Locals("id")
+	fmt.Println(id)
 
 	// Get the file from the request
 	file, err := c.FormFile("avatar")
@@ -202,4 +157,39 @@ func AddAvatar(c *fiber.Ctx) error {
 	db.DB.Model(&User{}).Where("id = ?", id).Update("avatar", filename)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Avatar uploaded"})
+}
+
+func GetIdFromToken(c *fiber.Ctx) error {
+
+	tokenString := c.Get("Authorization")
+
+	// Parse the token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Check the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		// Return the secret key
+		return []byte("secret"), nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Get the ID from the token claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return fmt.Errorf("Invalid token claims")
+	}
+
+	id := claims["id"].(string)
+
+	// Store the ID in the context
+	c.Locals("id", id)
+
+	// Continue to the next handler
+	return c.Next()
+
 }

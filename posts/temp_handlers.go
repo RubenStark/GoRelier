@@ -1,7 +1,6 @@
 package posts
 
 import (
-	"github.com/RubenStark/GoRelier/auth"
 	db "github.com/RubenStark/GoRelier/database"
 	"github.com/gofiber/fiber/v2"
 )
@@ -17,22 +16,14 @@ func CreateTempPost(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "No token provided",
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
 
-	// Get the ID of the user from the token
-	if tokenId, err := auth.GetTokenId(token); err != nil {
-		tempPost.UserID = tokenId
-	} else {
-		// Return the error we got
-		return c.SendString(err.Error())
-	}
+	tempPost.UserID = tokenId
 
 	// Create the post
 	if err := db.DB.Create(tempPost).Error; err != nil {
@@ -56,25 +47,17 @@ func DeleteTempPost(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "No token provided",
+	tokenId, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
 
-	// Get the ID of the user from the token
-	if tokenId, err := auth.GetTokenId(token); err != nil {
-		if post.UserID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
-	} else {
-		// Return the error we got
-		return c.SendString(err.Error())
+	if tokenId != post.UserID {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	// Delete the post
