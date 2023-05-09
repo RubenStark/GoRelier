@@ -36,13 +36,34 @@ func CreatePost(c *fiber.Ctx) error {
 		})
 	}
 
-	// Look up the corresponding user
-	var user auth.User
-	if err := db.DB.First(&user, post.UserID).Error; err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+	// Get the token from the authorization header
+	token := c.Get("Authorization")
+
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "No token provided",
+		})
+	}
+
+	// Get the ID of the user from the token
+	tokenId, err := auth.GetTokenId(token)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid token",
+		})
+	}
+
+	// Look for the user that has the ID of the token
+	user := new(auth.User)
+	if err := db.DB.Where("id = ?", tokenId).First(&user).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
 		})
 	}
+
+	// Set the author of the post
+	post.UserID = user.ID
+	post.User = *user
 
 	// Save the images to disk and create image records in database
 	if form, err := c.MultipartForm(); err == nil {
@@ -88,9 +109,14 @@ func CreatePost(c *fiber.Ctx) error {
 
 func GetPosts(c *fiber.Ctx) error {
 
-	var posts []Post
-	db.DB.Find(&posts)
+	// var posts []Post
+	// db.DB.Find(&posts)
 
+	// return c.Status(200).JSON(posts)
+
+	// Return all posts with ther user
+	var posts []Post
+	db.DB.Preload("User").Find(&posts)
 	return c.Status(200).JSON(posts)
 
 }
@@ -106,11 +132,12 @@ func GetPostsFromnUser(c *fiber.Ctx) error {
 // Delete a post
 func DeletePost(c *fiber.Ctx) error {
 
-	// Get the post
+	postID := c.Params("id")
+
 	var post Post
-	if err := db.DB.First(&post, c.Params("id")).Error; err != nil {
+	if err := db.DB.Where("id = ?", postID).First(&post).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": PNF,
+			"message": "Post not found",
 		})
 	}
 
@@ -130,9 +157,6 @@ func DeletePost(c *fiber.Ctx) error {
 				"error": "Unauthorized",
 			})
 		}
-	} else {
-		// Return the error we got
-		return c.SendString(err.Error())
 	}
 
 	// Delete the post

@@ -6,6 +6,7 @@ import (
 	"github.com/RubenStark/GoRelier/posts"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
@@ -30,9 +31,14 @@ func main() {
 
 	app := fiber.New()
 
+	// Allow CORS requests
+	app.Use(cors.New(cors.Config{
+		AllowCredentials: true,
+	}))
+
 	setupRoutes(app)
 
-	app.Listen(":3000")
+	app.Listen(":8000")
 }
 
 // Create a func to handle all the routes
@@ -42,11 +48,12 @@ func setupRoutes(app *fiber.App) {
 	app.Post("/signup/", auth.SignUp)
 	app.Post("/login/", auth.Login)
 	app.Get("/users/{id}", auth.GetUser)
+	app.Post("add-avatar/", auth.AddAvatar)
 
 	//posts routes
-	app.Post("posts/create/", posts.CreatePost)
-	app.Delete("/posts/:id/", posts.DeletePost)
 	app.Get("/posts/", posts.GetPosts)
+	app.Post("/posts/create/", posts.CreatePost)
+	app.Delete("/posts/:id/", posts.DeletePost)
 	app.Get("/posts/:id/", posts.GetPost)
 	app.Get("/posts/from/:id/", posts.GetPostsFromnUser)
 
@@ -72,6 +79,12 @@ func setupRoutes(app *fiber.App) {
 	app.Post("/temporary-posts/create/", posts.CreateTempPost)
 	app.Delete("/temporary-posts/:id/", posts.DeleteTempPost)
 	app.Get("/temporary-posts/", posts.GetTempPosts)
+
+	//comment routes
+	app.Post("/comments/create/", posts.CreateComment)
+	app.Delete("/comments/:id/", posts.DeleteComment)
+	app.Get("/comments/", posts.GetComments)
+	app.Get("/comments/:id/", posts.GetComments)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")

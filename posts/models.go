@@ -9,7 +9,7 @@ type Post struct {
 	gorm.Model
 	Caption   string `json:"caption"`
 	User      auth.User
-	UserID    uint            `json:"user_id"`
+	UserID    uint
 	Images    []Image         `gorm:"foreignKey:PostID" json:"images"`
 	Interests []auth.Interest `gorm:"many2many:post_interests;"`
 	Score     int
