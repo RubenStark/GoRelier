@@ -33,6 +33,7 @@ type Interest struct {
 
 type ProfileImage struct {
 	gorm.Model
-	Path string
-	User User `gorm:"foreignKey:ProfileImageID" json:"user"`
+	Path   string
+	UserID uint
+	User   User `gorm:"foreignKey:ProfileImageID"`
 }

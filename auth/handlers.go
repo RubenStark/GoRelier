@@ -188,6 +188,10 @@ func AddAvatar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid Token"})
 	}
 
+	//find the user in the database
+	var user User
+	db.DB.Find(&user, id)
+
 	// Get the file from the request
 	file, err := c.FormFile("avatar")
 	if err != nil {
@@ -197,6 +201,14 @@ func AddAvatar(c *fiber.Ctx) error {
 	// Save the file
 	filename := fmt.Sprintf("./avatar_pics/%v_%v", id, file.Filename)
 	c.SaveFile(file, filename)
+
+	var ProfileImage ProfileImage
+	ProfileImage.UserID = user.ID
+	ProfileImage.User = user
+	ProfileImage.Path = filename
+
+	// Save the ProfileImage in the database
+	db.DB.Create(&ProfileImage)
 
 	// Save the image URL in the database
 	db.DB.Model(&User{}).Where("id = ?", id).Update("avatar", filename)
