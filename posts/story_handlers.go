@@ -22,8 +22,10 @@ func CreateStory(c *fiber.Ctx) error {
 	}
 
 	// Look up the corresponding user
+	UserID := c.Locals("id").(uint)
 	var user auth.User
-	if err := db.DB.First(&user, story.UserID).Error; err != nil {
+
+	if err := db.DB.First(&user, UserID).Error; err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "User not found",
 		})
@@ -82,25 +84,16 @@ func DeleteStory(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "No token provided",
+	UserID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
-
-	// Get the ID of the user from the token
-	if tokenId, err := auth.GetTokenId(token); err != nil {
-		if post.UserID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
-	} else {
-		// Return the error we got
-		return c.SendString(err.Error())
+	if post.UserID != UserID {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	// Delete the post

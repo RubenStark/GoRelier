@@ -36,26 +36,16 @@ func CreatePost(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "No token provided",
-		})
-	}
-
-	// Get the ID of the user from the token
-	tokenId, err := auth.GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid token",
+	userID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
 
 	// Look for the user that has the ID of the token
 	user := new(auth.User)
-	if err := db.DB.Where("id = ?", tokenId).First(&user).Error; err != nil {
+	if err := db.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
 		})
@@ -141,22 +131,16 @@ func DeletePost(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "No token provided",
+	userID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
-
-	// Get the ID of the user from the token
-	if tokenId, err := auth.GetTokenId(token); err != nil {
-		if post.UserID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
+	if post.UserID != userID {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	// Delete the post
@@ -183,25 +167,16 @@ func EditPost(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "No token provided",
+	userID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
-
-	// Get the ID of the user from the token
-	if tokenId, err := auth.GetTokenId(token); err != nil {
-		if post.UserID != tokenId {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Unauthorized",
-			})
-		}
-	} else {
-		// Return the error we got
-		return c.SendString(err.Error())
+	if post.UserID != userID {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
 	}
 
 	// Parse the JSON request body into a Post struct

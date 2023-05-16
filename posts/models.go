@@ -34,7 +34,7 @@ type View struct {
 type Story struct {
 	gorm.Model
 	User   auth.User
-	UserID uint   `json:"user_id"`
+	UserID uint
 	Image  Image  `gorm:"foreignKey:StoryID" json:"image"`
 	Views  []View `gorm:"foreignKey:StoryID" json:"views"`
 }

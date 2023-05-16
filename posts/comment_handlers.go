@@ -18,19 +18,11 @@ const (
 func CreateComment(c *fiber.Ctx) error {
 	postID := c.Params("post")
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
-		})
-	}
-
-	userID, err := auth.GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": UTGT,
+	// Get the user id from the token
+	userID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
 
@@ -38,7 +30,7 @@ func CreateComment(c *fiber.Ctx) error {
 	var user auth.User
 
 	// Get the user
-	err = db.DB.First(&user, userID).Error
+	err := db.DB.First(&user, userID).Error
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
@@ -78,20 +70,10 @@ func CreateComment(c *fiber.Ctx) error {
 func EditComment(c *fiber.Ctx) error {
 	commentID := c.Params("id")
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
-		})
-	}
-
-	// Get the user id from the token
-	userID, err := auth.GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": UTGT,
+	userID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
 
@@ -129,22 +111,12 @@ func EditComment(c *fiber.Ctx) error {
 
 // Delete a comment
 func DeleteComment(c *fiber.Ctx) error {
+
 	commentID := c.Params("id")
-
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
-		})
-	}
-
-	// Get the user id from the token
-	userID, err := auth.GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": UTGT,
+	userID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
 		})
 	}
 

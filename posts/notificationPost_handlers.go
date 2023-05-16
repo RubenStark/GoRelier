@@ -9,10 +9,17 @@ import (
 )
 
 func CreateNotificationPost(c *fiber.Ctx) error {
+
+	UserID, ok := c.Locals("id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to get user id",
+		})
+	}
+
 	// Parse request body
 	var request struct {
 		UserToNotifyID uint   `json:"user_to_notify_id"`
-		UserID         uint   `json:"user_id"`
 		PostID         uint   `json:"post_id"`
 		Body           string `json:"body"`
 	}
@@ -28,7 +35,7 @@ func CreateNotificationPost(c *fiber.Ctx) error {
 	}
 
 	user := &auth.User{}
-	if err := db.DB.First(user, request.UserID).Error; err != nil {
+	if err := db.DB.First(user, UserID).Error; err != nil {
 		return err
 	}
 
@@ -57,21 +64,7 @@ func GetNotificationPosts(c *fiber.Ctx) error {
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
 	offset := (page - 1) * limit
 
-	// Get the token from the authorization header
-	token := c.Get("Authorization")
-
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": NTP,
-		})
-	}
-
-	userID, err := auth.GetTokenId(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": UTGT,
-		})
-	}
+	userID := c.Locals("id").(uint)
 
 	// Get the notifications for the user with the given ID
 	var notificationPosts []*NotificationPost
