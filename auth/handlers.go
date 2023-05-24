@@ -2,6 +2,10 @@ package auth
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	db "github.com/RubenStark/GoRelier/database"
@@ -138,24 +142,97 @@ func ValidateJWT(c *fiber.Ctx) error {
 	}
 }
 
+func GetIdFromToken(c *fiber.Ctx) error {
+	tokenString := c.Get("Authorization")
+
+	// Parse the JWT token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Provide the secret key or public key to validate the token
+		// Replace 'YOUR_SECRET_KEY' with your actual secret key or public key
+		return []byte("RelierPassword"), nil
+	})
+
+	if err != nil {
+		// Handle JWT parsing error
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Invalid JWT token",
+		})
+	}
+
+	// Extract the 'id' claim from the token
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		id := claims["_id"]
+		c.Locals("id", id)
+		return c.Next()
+	}
+
+	// Handle invalid or missing 'id' claim
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+		"message": "Invalid or missing ID claim",
+	})
+
+}
+
+func SaveImage(c *fiber.Ctx) error {
+
+	fmt.Println("Endpoint Hit: SaveImage")
+	id := c.Locals("id")
+	fmt.Println(id)
+	// get the file from the body of the request
+	file, err := c.FormFile("file")
+	if err != nil {
+		log.Println("Error while retrieving the image:", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
+	}
+
+	// Read the image file
+	src, err := file.Open()
+	if err != nil {
+		log.Println("Error while opening the image file:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
+	}
+	defer src.Close()
+
+	// Create a new file in the server
+	dst, err := os.Create("/path/to/save/image.jpg") // Set the desired path to save the image
+	if err != nil {
+		log.Println("Error while creating the destination file:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
+	}
+	defer dst.Close()
+
+	// Copy the image file to the destination file
+	if _, err = io.Copy(dst, src); err != nil {
+		log.Println("Error while copying the image file:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Image saved successfully"})
+}
+
 func AddAvatar(c *fiber.Ctx) error {
 	// Get the ID from the token
 	id := c.Locals("id")
-	fmt.Println(id)
 
-	//find the user in the database
+	// Get the user from the database using the ID
 	var user User
-	db.DB.Find(&user, id)
-
-	// Get the file from the request
-	file, err := c.FormFile("avatar")
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid file"})
+	// find the user by id
+	db.DB.Where("id = ?", id).First(&user)
+	if &user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User not found"})
 	}
 
-	// Save the file
-	filename := fmt.Sprintf("./avatar_pics/%v_%v", id, file.Filename)
-	c.SaveFile(file, filename)
+	// Get the file from the request
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": err})
+	}
+
+	//get the file extension
+	fileExt := filepath.Ext(file.Filename)
+
+	filename := fmt.Sprintf("%v_%v%v", user.Email, time.Now().UnixNano(), fileExt)
+	c.SaveFile(file, "./media/profile_pics/"+filename)
 
 	var ProfileImage ProfileImage
 	ProfileImage.UserID = user.ID
@@ -169,39 +246,4 @@ func AddAvatar(c *fiber.Ctx) error {
 	db.DB.Model(&User{}).Where("id = ?", id).Update("avatar", filename)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Avatar uploaded"})
-}
-
-func GetIdFromToken(c *fiber.Ctx) error {
-
-	tokenString := c.Get("Authorization")
-
-	// Parse the token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Check the signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-
-		// Return the secret key
-		return []byte("secret"), nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// Get the ID from the token claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return fmt.Errorf("Invalid token claims")
-	}
-
-	id := claims["id"].(string)
-
-	// Store the ID in the context
-	c.Locals("id", id)
-
-	// Continue to the next handler
-	return c.Next()
-
 }
