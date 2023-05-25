@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/RubenStark/GoRelier/admin"
 	"github.com/RubenStark/GoRelier/auth"
 	db "github.com/RubenStark/GoRelier/database"
 	"github.com/RubenStark/GoRelier/posts"
@@ -30,6 +31,7 @@ func main() {
 	) // Migrate the schema
 
 	app := fiber.New()
+	app.Static("/media", "./media")
 
 	// Allow CORS requests
 	app.Use(cors.New(cors.Config{
@@ -45,46 +47,49 @@ func main() {
 func setupRoutes(app *fiber.App) {
 
 	//auth routes
-	app.Post("/signup/", auth.SignUp)
-	app.Post("/login/", auth.Login)
-	app.Get("/users/{id}", auth.GetUser)
+	app.Post("/signup", auth.SignUp)
+	app.Post("/login", auth.Login)
+	app.Get("/users/:id", auth.GetUser)
 	app.Post("/add-avatar", auth.GetIdFromToken, auth.AddAvatar)
 
 	//posts routes
-	app.Get("/posts/", posts.GetPosts)
-	app.Post("/posts/create/", posts.CreatePost)
-	app.Delete("/posts/:id/", posts.DeletePost)
-	app.Get("/posts/:id/", posts.GetPost)
-	app.Get("/posts/from/:id/", posts.GetPostsFromnUser)
+	app.Get("/posts", posts.GetPosts)
+	app.Post("/posts/create", posts.CreatePost)
+	app.Delete("/posts/:id", posts.DeletePost)
+	app.Get("/posts/:id", posts.GetPost)
+	app.Get("/posts/from/:id", posts.GetPostsFromnUser)
 
 	//story routes
-	app.Post("/stories/create/", posts.CreateStory)
-	app.Delete("/stories/:id/", posts.DeleteStory)
-	app.Get("/stories/", posts.GetStories)
+	app.Post("/stories/create", posts.CreateStory)
+	app.Delete("/stories/:id", posts.DeleteStory)
+	app.Get("/stories", posts.GetStories)
 
 	//friend routes
-	app.Post("/friends/add/", auth.SendFriendRequest)
-	app.Post("/friends/accept/", auth.AcceptFriendRequest)
-	app.Post("/friends/delete/", auth.DeleteFriendRequest)
-	app.Get("/friends/requests/", auth.GetFriendRequests)
-	app.Delete("/friend/:id/", auth.DeleteFriend)
-	app.Get("/friends/", auth.GetFriendsPaginated)
+	app.Post("/friends/add", auth.SendFriendRequest)
+	app.Post("/friends/accept", auth.AcceptFriendRequest)
+	app.Post("/friends/delete", auth.DeleteFriendRequest)
+	app.Get("/friends/requests", auth.GetFriendRequests)
+	app.Delete("/friend/:id", auth.DeleteFriend)
+	app.Get("/friends", auth.GetFriendsPaginated)
 
 	//notification routes
-	app.Post("/post-notifications/", posts.CreateNotificationPost)
-	app.Get("/post-notifications/", posts.GetNotificationPosts)
-	app.Post("/post-notifications/seen/:id/", posts.ReadNotificationPost)
+	app.Post("/post-notifications", posts.CreateNotificationPost)
+	app.Get("/post-notifications", posts.GetNotificationPosts)
+	app.Post("/post-notifications/seen/:id", posts.ReadNotificationPost)
 
 	//temporary post routes
-	app.Post("/temporary-posts/create/", posts.CreateTempPost)
-	app.Delete("/temporary-posts/:id/", posts.DeleteTempPost)
-	app.Get("/temporary-posts/", posts.GetTempPosts)
+	app.Post("/temporary-posts/create", posts.CreateTempPost)
+	app.Delete("/temporary-posts/:id", posts.DeleteTempPost)
+	app.Get("/temporary-posts", posts.GetTempPosts)
 
 	//comment routes
-	app.Post("/comments/create/", posts.CreateComment)
-	app.Delete("/comments/:id/", posts.DeleteComment)
-	app.Get("/comments/", posts.GetComments)
-	app.Get("/comments/:id/", posts.GetComments)
+	app.Post("/comments/create", posts.CreateComment)
+	app.Delete("/comments/:id", posts.DeleteComment)
+	app.Get("/comments", posts.GetComments)
+	app.Get("/comments/:id", posts.GetComments)
+
+	//admin routes
+	app.Get("admin/users/", admin.GetUsers)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")

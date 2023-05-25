@@ -17,6 +17,8 @@ import (
 // Creates a new user
 func SignUp(c *fiber.Ctx) error {
 
+	fmt.Println("Creating user")
+
 	//get the user from the request body
 	var user User
 	if err := c.BodyParser(&user); err != nil {
@@ -27,12 +29,14 @@ func SignUp(c *fiber.Ctx) error {
 	var finalUser User
 	db.DB.Where("email = ?", user.Email).First(&finalUser)
 	if finalUser.Email != "" {
+		fmt.Println("User already exists")
 		return c.Status(500).SendString("User already exists")
 	}
 
 	//hash the password
 	hashedPassword, err := HashPassword(user.Password)
 	if err != nil {
+		fmt.Println("Could not hash password")
 		return c.Status(503).SendString(err.Error())
 	}
 
@@ -45,7 +49,8 @@ func SignUp(c *fiber.Ctx) error {
 
 	db.DB.Create(&finalUser)
 
-	return c.JSON(finalUser)
+	fmt.Println(finalUser)
+	return c.SendStatus(200)
 }
 
 func Login(c *fiber.Ctx) error {
@@ -85,6 +90,7 @@ func generateJWT(t User) (string, error) {
 		"nombre":           t.Name,
 		"apellidos":        t.Username,
 		"fecha_nacimiento": t.Password,
+		"avatar":           t.Avatar,
 		"_id":              t.ID,
 		"exp":              time.Now().Add(time.Hour * 24).Unix(),
 	}
@@ -207,7 +213,7 @@ func SaveImage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
 	}
 
-	return c.JSON(fiber.Map{"message": "Image saved successfully"})
+	return c.SendStatus(200)
 }
 
 func AddAvatar(c *fiber.Ctx) error {
