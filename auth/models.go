@@ -4,12 +4,12 @@ import "github.com/jinzhu/gorm"
 
 type User struct {
 	gorm.Model
+	Email         string `gorm:"unique_index" json:"email"`
 	Name          string `json:"name"`
 	Username      string `json:"username"`
-	Email         string `gorm:"unique_index" json:"email"`
-	Password      string `json:"password"`
 	Bio           string `json:"bio"`
 	Avatar        string
+	Password      string         `json:"password"`
 	ProfileImages []ProfileImage `gorm:"many2many:user_profileimage;"`
 	Interests     []Interest     `gorm:"many2many:user_interests;"`
 }

@@ -51,10 +51,15 @@ func setupRoutes(app *fiber.App) {
 	app.Post("/login", auth.Login)
 	app.Get("/users/:id", auth.GetUser)
 	app.Post("/add-avatar", auth.GetIdFromToken, auth.AddAvatar)
+	app.Post("/update-user", auth.GetIdFromToken, auth.UpdateUser)
+	app.Post("/add-interests", auth.GetIdFromToken, auth.AddInterests)
+
+	//search routes
+	app.Get("/search", auth.SearchUser)
 
 	//posts routes
 	app.Get("/posts", posts.GetPosts)
-	app.Post("/posts/create", posts.CreatePost)
+	app.Post("/posts/create", auth.GetIdFromToken, posts.CreatePost)
 	app.Delete("/posts/:id", posts.DeletePost)
 	app.Get("/posts/:id", posts.GetPost)
 	app.Get("/posts/from/:id", posts.GetPostsFromnUser)

@@ -10,16 +10,16 @@ type Post struct {
 	Caption   string `json:"caption"`
 	User      auth.User
 	UserID    uint
-	Images    []Image         `gorm:"foreignKey:PostID" json:"images"`
-	Interests []auth.Interest `gorm:"many2many:post_interests;"`
+	Image     Image           `gorm:"foreignKey:PostID" json:"image"`
+	Interests []auth.Interest `gorm:"many2many:post_interests;" json:"interests"`
 	Score     int
 	Views     []View `gorm:"foreignKey:PostID" json:"views"`
 }
 
 type Image struct {
 	gorm.Model
-	Path   string
-	PostID uint
+	Path string
+	// PostID uint
 }
 
 type View struct {

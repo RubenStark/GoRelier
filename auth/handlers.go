@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	db "github.com/RubenStark/GoRelier/database"
@@ -43,6 +44,7 @@ func SignUp(c *fiber.Ctx) error {
 	//create the user
 	finalUser = User{
 		Name:     user.Name,
+		Username: user.Username,
 		Email:    user.Email,
 		Password: hashedPassword,
 	}
@@ -77,7 +79,8 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"token": token,
+		"status": 200,
+		"token":  token,
 	})
 
 }
@@ -86,13 +89,13 @@ func generateJWT(t User) (string, error) {
 	miClave := []byte("RelierPassword")
 
 	payload := jwt.MapClaims{
-		"email":            t.Email,
-		"nombre":           t.Name,
-		"apellidos":        t.Username,
-		"fecha_nacimiento": t.Password,
-		"avatar":           t.Avatar,
-		"_id":              t.ID,
-		"exp":              time.Now().Add(time.Hour * 24).Unix(),
+		"email":    t.Email,
+		"name":     t.Name,
+		"username": t.Username,
+		"birthday": t.Password,
+		"avatar":   t.Avatar,
+		"_id":      t.ID,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
@@ -106,6 +109,19 @@ func generateJWT(t User) (string, error) {
 
 func comparePasswords(hashedPassword string, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}
+
+func SearchUser(c *fiber.Ctx) error {
+	username := c.Query("username")
+
+	if username == "" {
+		return c.Status(400).SendString("Username was empty")
+	}
+
+	var users []User
+	// Esto se hace para que no sea case sensitive
+	db.DB.Where("LOWER(name) LIKE ? OR LOWER(username) LIKE ?", "%"+strings.ToLower(username)+"%", "%"+strings.ToLower(username)+"%").Limit(20).Find(&users)
+	return c.JSON(users)
 }
 
 // Get a single user
@@ -217,6 +233,7 @@ func SaveImage(c *fiber.Ctx) error {
 }
 
 func AddAvatar(c *fiber.Ctx) error {
+	print("Endpoint Hit: AddAvatar")
 	// Get the ID from the token
 	id := c.Locals("id")
 
@@ -251,5 +268,82 @@ func AddAvatar(c *fiber.Ctx) error {
 	// Save the image URL in the database
 	db.DB.Model(&User{}).Where("id = ?", id).Update("avatar", filename)
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Avatar uploaded"})
+	println(filename)
+	// return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": filename})
+	return c.JSON(fiber.Map{
+		"status":  200,
+		"message": filename,
+	})
+}
+
+func UpdateUser(c *fiber.Ctx) error {
+	id := c.Locals("id")
+	var user User
+	db.DB.Where("id = ?", id).First(&user)
+	if &user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User not found"})
+	}
+
+	var request struct {
+		Name     string `json:"name"`
+		Username string `json:"username"`
+		Bio      string `json:"bio"`
+	}
+
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": err})
+	}
+
+	// Update the user
+
+	if request.Name != "" {
+		db.DB.Model(&user).Updates(User{Name: request.Name})
+	}
+
+	if request.Username != "" {
+		db.DB.Model(&user).Updates(User{Username: request.Username})
+	}
+
+	if request.Bio != "" {
+		db.DB.Model(&user).Updates(User{Bio: request.Bio})
+	}
+
+	// db.DB.Model(&user).Updates(User{Name: request.Name, Username: request.Username, Bio: request.Bio})
+
+	return c.Status(fiber.StatusOK).JSON(user)
+
+}
+
+func AddInterests(c *fiber.Ctx) error {
+	id := c.Locals("id")
+
+	var user User
+	db.DB.Where("id = ?", id).First(&user)
+	if &user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "User not found"})
+	}
+
+	fmt.Println(len(user.Interests))
+
+	type RequestBody struct {
+		Interest []string `json:"interest"`
+	}
+
+	var requestBody RequestBody
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Error al analizar la solicitud"})
+	}
+
+	for _, interest := range requestBody.Interest {
+		// Crear un nuevo objeto de interés
+		interest := Interest{Interest: interest}
+		db.DB.Create(&interest)
+
+		// Agregar el nuevo interés al usuario y actualizar la base de datos
+		db.DB.Model(&user).Association("Interests").Append(&interest)
+	}
+
+	fmt.Println(db.DB.Model(&user).Association("Interests").Find(&user.Interests))
+
+	return c.Status(fiber.StatusOK).JSON(user)
 }

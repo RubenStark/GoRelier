@@ -2,7 +2,7 @@ package posts
 
 import (
 	"fmt"
-	"strconv"
+	"path/filepath"
 	"time"
 
 	"github.com/RubenStark/GoRelier/auth"
@@ -36,12 +36,12 @@ func CreatePost(c *fiber.Ctx) error {
 		})
 	}
 
-	userID, ok := c.Locals("id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Unable to get user id",
-		})
-	}
+	// add the interests "one", "two", "three" to the post
+	// post.Interests = append(post.Interests, auth.Interest{Interest: "one"})
+	// post.Interests = append(post.Interests, auth.Interest{Interest: "two"})
+	// post.Interests = append(post.Interests, auth.Interest{Interest: "three"})
+
+	userID := c.Locals("id")
 
 	// Look for the user that has the ID of the token
 	user := new(auth.User)
@@ -55,36 +55,29 @@ func CreatePost(c *fiber.Ctx) error {
 	post.UserID = user.ID
 	post.User = *user
 
-	// Save the images to disk and create image records in database
-	if form, err := c.MultipartForm(); err == nil {
-
-		// Get all images from the form:
-		files := form.File["images"]
-
-		// Loop through files:
-		for i, file := range files {
-			fmt.Println(file.Filename, file.Size, file.Header["Content-Type"][0])
-
-			filename := user.Email + "-" + time.Now().Format("2006-01-02") + "-" + strconv.Itoa(i)
-
-			// Save the files to disk:
-			if err := c.SaveFile(file, fmt.Sprintf("/media/postImages/%s/%s", user.Email, filename)); err != nil {
-				return err
-			}
-
-			// Create image record in database
-			image := Image{
-				PostID: post.ID,
-				Path:   fmt.Sprintf("/media/postImages/%s/%s", user.Email, filename),
-			}
-
-			if err := db.DB.Create(&image).Error; err != nil {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"message": "Failed to create image record",
-				})
-			}
+	//save the image
+	file, err := c.FormFile("image")
+	if file != nil {
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Unable to get image file",
+			})
 		}
+
+		//get the file extension
+		fileExt := filepath.Ext(file.Filename)
+
+		filename := fmt.Sprintf("%v_%v%v", user.Email, time.Now().UnixNano(), fileExt)
+		err = c.SaveFile(file, "./media/post_pics/"+filename)
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(fiber.Map{"message": err})
+		}
+		// Save the image URL in the database
+		post.Image.Path = filename
 	}
+
+	fmt.Println(post.Interests)
 
 	// Create the post
 	if err := db.DB.Create(post).Error; err != nil {

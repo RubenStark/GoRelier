@@ -50,8 +50,8 @@ func CreateStory(c *fiber.Ctx) error {
 
 			// Create image record in database
 			image := Image{
-				PostID: story.ID,
-				Path:   fmt.Sprintf("/media/storyImages/%s/%s", user.Email, filename),
+				// PostID: story.ID,
+				Path: fmt.Sprintf("/media/storyImages/%s/%s", user.Email, filename),
 			}
 
 			if err := db.DB.Create(&image).Error; err != nil {
